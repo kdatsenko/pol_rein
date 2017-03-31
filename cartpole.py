@@ -149,26 +149,23 @@ class CartPoleEnv(gym.Env):
 
 #=================PART 2==============================================
 #env = gym.make('Cartpole-v0')
-env = CartPoleEnv()
+env = gym.make('CartPole-v0')
+cartpole = CartPoleEnv()
 #???
 
 
 RNG_SEED=1
 np.random.seed(0)
 tf.set_random_seed(RNG_SEED)
-env._seed(RNG_SEED)
+cartpole._seed(RNG_SEED)
 
 
 alpha = 0.0001
 TINY = 1e-8
 gamma = 0.99
 
-# xavier initialization is another way to init weight randomly, but better
-weights_init = xavier_initializer(uniform=False)
-relu_init = tf.constant_initializer(0.1)
 
-w_init = weights_init
-b_init = relu_init
+weights = xavier_initializer(uniform=False) # Should we initialize?
 
 # try:
 #     output_units = env.action_space.shape[0]
@@ -177,10 +174,10 @@ b_init = relu_init
 
 #input_shape = env.observation_space.shape[0]
 NUM_INPUT_FEATURES = 4 #the state vector #CHANGE
-x = tf.placeholder("float",[None,NUM_INPUT_FEATURES], name='x') #state
+x = tf.placeholder(tf.float32, shape=(None,NUM_INPUT_FEATURES), name='x') #state
 #y - At (actions selected from A_0 to A_T-1 via bernoulli)
 #probablity of actions (num_actions = output_units)
-y = tf.placeholder("float",[None,1], name='y')
+y = tf.placeholder(tf.int32, shape=(None), name='y')
 
 
 #The policy function should have two outputs - the probability of "left"
@@ -189,7 +186,7 @@ y = tf.placeholder("float",[None,1], name='y')
 #Note that a softmax layer is simply a fully-connected layer with a 
 #softmax actication.
 
-params = tf.get_variable("policy_parameters",[NUM_INPUT_FEATURES,2])
+params = tf.get_variable("thetas",[NUM_INPUT_FEATURES,2])
 linear_layer = tf.matmul(x,params)
 all_vars = tf.global_variables()
 pi = tf.nn.softmax(linear_layer)
@@ -233,14 +230,18 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 MEMORY=25
-MAX_STEPS = 50#env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
+MAX_STEPS = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps') #200
 
 track_returns = []
 total_time_steps = 0
+avg_time_steps_per_episode = 0
 
-for ep in range(200): #number of simulations of policy 
+for ep in range(10000): #number of simulations of policy 
+
+    if avg_time_steps_per_episode >= 50: #wait until avg is at least 50
+        break
     # reset the environment
-    obs = env._reset() #root state
+    obs = cartpole._reset() #root state
 
     # generate an episode following the policy with current theta
     # generating all the states and actions and rewards
@@ -251,24 +252,24 @@ for ep in range(200): #number of simulations of policy
     done = False
     t = 0
     I = 1
-    while not done:
+    while not done: #run an episode until the pole drops
         ep_states.append(obs) #record the state
-        #env._render()
+        #cartpole._render()
 
         # pick a single random action for time step t, based on state obs 
         action_probs = sess.run(pi, feed_dict={x:[obs]})
         #Get action sample using Bernoulli, probs already provided thanks to policy
-        if random.uniform(0,1) < action_probs[0][0]:
-            action = 0
+        if np.random.uniform(0,1) < action_probs[0][0]:
+            action = 0#tf.constant(0, dtype=tf.int32)
         else:
-            action = 1
+            action = 1#tf.constant(1, dtype=tf.int32)
         
         ep_actions.append(action)
         
         # Rewards are always 1.0, so its difficult
         # to distinguish between bad actions and good actions.
         
-        obs, reward, done, info = env._step(action)
+        obs, reward, done, info = cartpole._step(action)
         ep_rewards.append(reward * I) #R_t - reward after action a
         # G is the total discounted reward, starting from time t=0
         #R1 + gamma*R2 + gamma^2*R3 + ... + gamma^(MAX_STEPS - 1)*RN
@@ -277,8 +278,8 @@ for ep in range(200): #number of simulations of policy
 
         t += 1
         #t >= MAX_STEPS:
-        if done or t >= MAX_STEPS: #run an episode until the pole drops
-            break
+        if t >= MAX_STEPS: 
+            break # done generating the episode
 
     #if not args.load_model:
     # np.cumsum: for each index i of ep_rewards, compute sum of entry at i,
@@ -290,26 +291,39 @@ for ep in range(200): #number of simulations of policy
     returns = np.array([G - np.cumsum(ep_rewards[:-1])]).T
     index = ep % MEMORY
 
-    returns = np.expand_dims(returns, axis=1)
+    # = np.expand_dims(y, axis=1)
     # ep_states contains all the state S_0 to S_T-1
     # ep_actions contains all the actions from A_0 to A_T-1
     # returns contains all the G_t's from t=1 to t=T       
     _ = sess.run([train_op],
                 feed_dict={x:np.array(ep_states),
                             y:np.array(ep_actions),
+                            #y:np.reshape(np.array(ep_actions), (len(ep_actions), 1)),
                             Returns:returns })
 
-    track_returns.append(G) 
-    track_returns = track_returns[-MEMORY:]
-    mean_return = np.mean(track_returns)
+    #track_returns.append(G) 
+    #track_returns = track_returns[-MEMORY:]
+    #mean_return = np.mean(track_returns)
     total_time_steps += t
-    avg_time_steps_per_episode = (float(total_time_steps) / float(ep))
-    print("Episode {} finished after {} steps with return {}".format(ep, t, G))
-    #print("Mean return over the last {} episodes is {}".format(MEMORY, mean_return))
-    print("Cost: {}".format(sess.run(loss, feed_dict={x:np.array(ep_states),y:np.array(ep_actions), Returns:returns })))
+    avg_time_steps_per_episode = (float(total_time_steps) / float(ep + 1))
 
-    print("At Episode {} average number of time steps per episode = {}".format(ep, avg_time_steps_per_episode))
-    # how the weights of the policy function changed ... (theta)
-    print("Weights of the policy function: \n {}".format(sess.run(tf.get_variable("policy_parameters")))) 
+    if True:#(ep % 100 == 0):
+        #print("Episode {} finished after {} steps with return {}".format(ep, t, G))
+        #print("Mean return over the last {} episodes is {}".format(MEMORY, mean_return))
+        print("Cost: {}".format(sess.run(loss, feed_dict={x:np.array(ep_states),y:np.array(ep_actions), Returns:returns })))
+
+        print("At Episode {} average number of time steps per episode = {}".format(ep, avg_time_steps_per_episode))
+        # how the weights of the policy function changed ... (theta)
+
+        with tf.variable_scope("", reuse=True):
+            print("Weights of the policy function: \n {}".format(sess.run(tf.get_variable("thetas")))) 
+            # ll1 = sess.run(pi, feed_dict={x:np.array(ep_states),y:np.array(ep_actions), Returns:returns })
+            # print("pi: \n {}".format(ll1)) 
+            # ll2 = sess.run(log_pi, feed_dict={x:np.array(ep_states),y:np.array(ep_actions), Returns:returns })
+            # print("log_pi: \n {}".format(ll2)) 
+            
+            # print("returns: \n {}".format(np.array(ep_actions))) 
+            # ll3 = sess.run(act_pi, feed_dict={x:np.array(ep_states),y:np.array(ep_actions), Returns:returns })
+            # print("act_pi: \n {}".format(ll3)) 
 
 sess.close()
