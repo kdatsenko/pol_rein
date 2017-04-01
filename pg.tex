@@ -1,0 +1,373 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Programming/Coding Assignment
+% LaTeX Template
+%
+% This template has been downloaded from:
+% http://www.latextemplates.com
+%
+% Original author:
+% Ted Pavlic (http://www.tedpavlic.com)
+%
+% Note:
+% The \lipsum[#] commands throughout this template generate dummy text
+% to fill the template out. These commands should all be removed when 
+% writing assignment content.
+%
+% This template uses a Perl script as an example snippet of code, most other
+% languages are also usable. Configure them in the "CODE INCLUSION 
+% CONFIGURATION" section.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\usepackage{fancyhdr} % Required for custom headers
+\usepackage{lastpage} % Required to determine the last page for the footer
+\usepackage{extramarks} % Required for headers and footers
+\usepackage[usenames,dvipsnames]{color} % Required for custom colors
+\usepackage{graphicx} % Required to insert images
+\usepackage{subcaption}
+\usepackage{listings} % Required for insertion of code
+\usepackage{courier} % Required for the courier font
+\usepackage{lipsum} % Used for inserting dummy 'Lorem ipsum' text into the template
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{float}
+
+% Margins
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+
+\linespread{1.1} % Line spacing
+
+% Set up the header and footer
+\pagestyle{fancy}
+\lhead{\hmwkAuthorName} % Top left header
+\chead{\hmwkClass\ (\hmwkClassTime): \hmwkTitle} % Top center head
+%\rhead{\firstxmark} % Top right header
+\lfoot{\lastxmark} % Bottom left footer
+\cfoot{} % Bottom center footer
+\rfoot{Page\ \thepage\ of\ \protect\pageref{LastPage}} % Bottom right footer
+\renewcommand\headrulewidth{0.4pt} % Size of the header rule
+\renewcommand\footrulewidth{0.4pt} % Size of the footer rule
+
+\setlength\parindent{0pt} % Removes all indentation from paragraphs
+
+%----------------------------------------------------------------------------------------
+%	CODE INCLUSION CONFIGURATION
+%----------------------------------------------------------------------------------------
+
+\definecolor{MyDarkGreen}{rgb}{0.0,0.4,0.0} % This is the color used for comments
+\lstloadlanguages{Perl} % Load Perl syntax for listings, for a list of other languages supported see: ftp://ftp.tex.ac.uk/tex-archive/macros/latex/contrib/listings/listings.pdf
+\lstset{language=Perl, % Use Perl in this example
+        frame=single, % Single frame around code
+        basicstyle=\small\ttfamily, % Use small true type font
+        keywordstyle=[1]\color{Blue}\bf, % Perl functions bold and blue
+        keywordstyle=[2]\color{Purple}, % Perl function arguments purple
+        keywordstyle=[3]\color{Blue}\underbar, % Custom functions underlined and blue
+        identifierstyle=, % Nothing special about identifiers                                         
+        commentstyle=\usefont{T1}{pcr}{m}{sl}\color{MyDarkGreen}\small, % Comments small dark green courier font
+        stringstyle=\color{Purple}, % Strings are purple
+        showstringspaces=false, % Don't put marks in string spaces
+        tabsize=5, % 5 spaces per tab
+        %
+        % Put standard Perl functions not included in the default language here
+        morekeywords={rand},
+        %
+        % Put Perl function parameters here
+        morekeywords=[2]{on, off, interp},
+        %
+        % Put user defined functions here
+        morekeywords=[3]{test},
+       	%
+        morecomment=[l][\color{Blue}]{...}, % Line continuation (...) like blue comment
+        numbers=left, % Line numbers on left
+        firstnumber=1, % Line numbers start with line 1
+        numberstyle=\tiny\color{Blue}, % Line numbers are blue and small
+        stepnumber=5 % Line numbers go in steps of 5
+}
+
+% Creates a new command to include a perl script, the first parameter is the filename of the script (without .pl), the second parameter is the caption
+\newcommand{\perlscript}[2]{
+\begin{itemize}
+\item[]\lstinputlisting[caption=#2,label=#1]{#1.pl}
+\end{itemize}
+}
+
+%----------------------------------------------------------------------------------------
+%	DOCUMENT STRUCTURE COMMANDS
+%	Skip this unless you know what you're doing
+%----------------------------------------------------------------------------------------
+
+% Header and footer for when a page split occurs within a problem environment
+\newcommand{\enterProblemHeader}[1]{
+%\nobreak\extramarks{#1}{#1 continued on next page\ldots}\nobreak
+%\nobreak\extramarks{#1 (continued)}{#1 continued on next page\ldots}\nobreak
+}
+
+% Header and footer for when a page split occurs between problem environments
+\newcommand{\exitProblemHeader}[1]{
+%\nobreak\extramarks{#1 (continued)}{#1 continued on next page\ldots}\nobreak
+%\nobreak\extramarks{#1}{}\nobreak
+}
+
+\setcounter{secnumdepth}{0} % Removes default section numbers
+\newcounter{homeworkProblemCounter} % Creates a counter to keep track of the number of problems
+\setcounter{homeworkProblemCounter}{0}
+
+\newcommand{\homeworkProblemName}{}
+\newenvironment{homeworkProblem}[1][Part \arabic{homeworkProblemCounter}]{ % Makes a new environment called homeworkProblem which takes 1 argument (custom name) but the default is "Problem #"
+\stepcounter{homeworkProblemCounter} % Increase counter for number of problems
+\renewcommand{\homeworkProblemName}{#1} % Assign \homeworkProblemName the name of the problem
+\section{\homeworkProblemName} % Make a section in the document with the custom problem count
+\enterProblemHeader{\homeworkProblemName} % Header and footer within the environment
+}{
+\exitProblemHeader{\homeworkProblemName} % Header and footer after the environment
+}
+
+\newcommand{\problemAnswer}[1]{ % Defines the problem answer command with the content as the only argument
+\noindent\framebox[\columnwidth][c]{\begin{minipage}{0.98\columnwidth}#1\end{minipage}} % Makes the box around the problem answer and puts the content inside
+}
+
+\newcommand{\homeworkSectionName}{}
+\newenvironment{homeworkSection}[1]{ % New environment for sections within homework problems, takes 1 argument - the name of the section
+\renewcommand{\homeworkSectionName}{#1} % Assign \homeworkSectionName to the name of the section from the environment argument
+\subsection{\homeworkSectionName} % Make a subsection with the custom name of the subsection
+\enterProblemHeader{\homeworkProblemName\ [\homeworkSectionName]} % Header and footer within the environment
+}{
+\enterProblemHeader{\homeworkProblemName} % Header and footer after the environment
+}
+\allowdisplaybreaks 
+%----------------------------------------------------------------------------------------
+%	NAME AND CLASS SECTION
+%----------------------------------------------------------------------------------------
+
+\newcommand{\hmwkTitle}{Project 4} % Assignment title
+\newcommand{\hmwkDueDate}{Friday,\ March\ 31,\ 2017} % Due date
+\newcommand{\hmwkClass}{CSC411} % Course/class
+\newcommand{\hmwkClassTime}{L0101} % Class/lecture time
+\newcommand{\hmwkAuthorName}{Katie Datsenko, Loora Zhuoran Li } % Your name
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title{
+\vspace{2in}
+\textmd{\textbf{\hmwkClass:\ \hmwkTitle}}\\
+\normalsize\vspace{0.1in}\small{Due\ on\ \hmwkDueDate}\\
+\vspace{0.1in}
+\vspace{3in}
+}
+
+\author{\textbf{\hmwkAuthorName}}
+%\date{} % Insert date here if you want it to appear below your name
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle
+\clearpage
+%----------------------------------------------------------------------------------------
+%	PROBLEM 1
+%----------------------------------------------------------------------------------------
+
+% To have just one problem per page, simply put a \clearpage after each problem
+
+\begin{homeworkProblem}
+...
+
+\end{homeworkProblem}
+
+\clearpage
+
+\begin{homeworkProblem}
+
+
+
+\begin{enumerate}
+
+\item Environment Setup
+
+We added our code right after the class $CartPoleEnv$, and set up the environment with these two lines:
+
+\begin{lstlisting}
+env = gym.make('CartPole-v0')
+cartpole = CartPoleEnv()
+\end{lstlisting}
+
+We added the line 
+\begin{lstlisting}
+np.random.seed(0)
+\end{lstlisting}
+as part of our random seed settings because we use np.random further in the code (when generating a action via bernoulli sample). \\
+
+\item Policy Function
+
+We removed the previous policy function model which was a single-hidden-layer network and replaced it with a single fully-connected softmax layer. 
+
+We have variables $x$, $params$ with dimensions ($T \times 4$) and ($4 \times 2$) respectively. Variable $x$ represents the list of States $S$ of the cartpole, for a single episode. Each individual state is encoded by $4$ features (thus, NUM\_INPUT\_FEATURES is updated to $4$), relevant to the internal state representation as dictated by the $CartPoleEnv$ class. Variable $params$ represents our theta parameters for the policy function, they are the weights of the fully connected single layer. In the Cart Pole task, only two actions are possible, applying a force pushing left, and applying a force pushing right. Thus our policy function, which takes a state as input and outputs the probability of an action, has two outputs: one for action left and one for action right. Our corresponding single layer network has two output units, which are passed through a softmax activation function, which will eventually learn to compute the "probabilities" of an action, through our policy reinforcement training algorithm. This justifies the ($4 \times 2$) dimension of our theta parameter matrix $params$. \\
+
+\begin{lstlisting}
+NUM_INPUT_FEATURES = 4 #the number of features of the state vector 
+x = tf.placeholder(tf.float32, shape=(None,NUM_INPUT_FEATURES), name='x') #state
+#y - A_t (actions selected from A_0 to A_T-1 via bernoulli)
+y = tf.placeholder(tf.int32, shape=(None), name='y')
+
+params = tf.get_variable("thetas",[NUM_INPUT_FEATURES,2])
+linear_layer = tf.matmul(x,params)
+pi = tf.nn.softmax(linear_layer)
+\end{lstlisting} \\\\
+
+\item Stochastic gradient update
+
+We also compute each stochastic estimation of the total expected reward based on an episode of the policy in the following way: we take the log of the softmax probabilities computed for every state in the episode (stored in Variable $pi$). Variable $y$ stores the list of actions (one action per time step in the episode), 0 is assigned as the left action, 1 as the right. We keep the probabilities of only the actions that actually occurred in the generated episode by converting y to a one-hot representation and doing elementwise multiplication (Variable $act\_pi$ with modifications to the line from the handout). Then we multiply each reward value $G_{t}$ (stored in Returns) with the log of the probability of the action $A_{t}$ taken at the state $S_{t}$ for time step $t$ and sum over all values for every time step $t$ of an episode. This corresponds to the pseudocode on the slides, with the exception that we are trying to do the updates for an episode all at once, versus for each time step individually in an iteration of the loop and combining updates as we iterate (the gradient of a sum is equal to the sum of the gradients of the individual terms). To turn our Reward Expectation Maximization problem into a minimization problem, we multiply the expected episode reward by $-1$. The Tensorflow gradient descent algorithm will take care of the computation of the gradient with respect to theta for this update.    \\ 
+
+\begin{lstlisting}
+
+# log of prob of actions A_0 and A_1 for every state for episode
+log_pi = tf.log(pi) #2 prob values for every state in vector of time steps 
+
+#We make a one-hot vector of 0/1 actions stored in y
+#with a one at the action we want to increase the probability of.
+
+#1. log_pi - should be (T x 2), 2 action probabilities for every time step
+#2. tf.one_hot(y, 2, axis=1) - every row corresponds to one time step T, 
+#columns are left & right probabilities - (T x 2)
+
+#tf.multiply - Returns x * y elementwise, will set the prob of action != At to 0
+#tf.reduce_sum - squeezes vector values across two rows into flat vector,
+#act_pi is probability of action A_t for every time step t
+
+act_pi = tf.reduce_sum(tf.multiply(log_pi, tf.one_hot(y, 2, axis=1)), reduction_indices=[1])
+
+#Returns contains all the G_t's from t=1 to t=T     
+Returns = tf.placeholder(tf.float32, name='Returns')
+optimizer = tf.train.GradientDescentOptimizer(alpha)
+
+vect = act_pi * Returns #elementwise multiplication
+#for gradient update for entire episode we take the sum
+#Multiply by -1 because we want to maximize JavV reinforcement reward by 
+#following policy theta
+loss = -tf.reduce_sum(vect) 
+train_op = optimizer.minimize(loss)
+
+\end{lstlisting}
+
+\item Training Parameters
+
+We changed the values of $\alpha$ and $\gamma$ to be 0.0001 and 0.99 respectively, and compute the average number of time-steps per episode, stopping the reinforcement algorithm when the average is at $50$ or higher. MAX\_STEPS (max limit of time steps possible in an episode) is given by the environment constant which is set at $200$ by default. 
+
+\begin{lstlisting}
+alpha = 0.0001
+gamma = 0.99
+MAX_STEPS = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
+\end{lstlisting}
+
+\item Sampling action $A_{t}$
+
+The last important change to the code is how we sample actions for each time step of an episode from our policy function with the current theta. For Bipedal reinforcement, the actions were continuous values; thus the probabilities of actions were modelled using a normal distribution, and a sample action for a state came from a Normal Distribution with a particular $\mu$ and $\sigma$ (computed using a network trained on state input). In the Cartpole problem, the actions are discrete; there are only two. Thus this corresponds to sampling actions from a Bernoulli distribution, where the probabilities of the left or right action come from the two softmax units.
+
+\begin{lstlisting}
+ep_states.append(obs) #record the state
+# pick a single random action for time step t, based on state obs 
+action_probs = sess.run(pi, feed_dict={x:[obs]})
+#Get action sample using Bernoulli, probs already provided thanks to policy
+if np.random.uniform(0,1) < action_probs[0][0]:
+    action = 0
+else:
+    action = 1
+
+ep_actions.append(action)
+
+\end{lstlisting}
+
+\end{enumerate}
+
+\end{homeworkProblem}
+\clearpage
+
+
+
+
+\begin{homeworkProblem}
+
+List the 10 words that most strongly predict that the review is positive, and the 10 words that most strongly predict that the review is negative. State how you obtained those in terms of the the conditional probabilities used in the Naive Bayes algorithm.
+
+For each word $a_{i}$ in the training set of reviews we store the $\log$ of the conditional probability of a word with respect to the class $$\log(P(a_{i} | class)) + \log(P(class))$$ in a dictionary named $wordDict$ stored under the respective class (i.e. either $wordDict[word][0]$ for positive or $wordDict[word][1]$ for negative). This allows us to easily compute the bayes classification probability for a sample review consisting of multiple words by taking the sum of the log of conditional probabilities, or the sum of the corresponding entries for each word $a_{i}$ in the $wordDict$.
+
+To obtain the words that strongly predict one of the classes, we used the log odds ratio of the conditional probabilities of $a_{i}$ between the positive and negative classes. For example, the ratio of the positive to the negative class may be expressed as:
+
+$$\log(\frac{P(class=1 | a_{i})}{P(class=0 | a_{i})})$$
+
+$$ = \log\Big(\frac{\big(\frac{P(a_{i}=1 | class=1) P(class=1)}{P(a_{i})}\big)}{\big(\frac{P(a_{i}=1 | class=0)P(class=0)}{P(a_{i})}\big)}\Big)$$
+
+
+$$= \log(P(a_{i} | class=1)) - \log(P(a_{i} | class=0)) + log(\frac{P(class=1)}{P(class=0)})$$
+
+(The $log(\frac{P(class=1)}{P(class=0)})$ term may be excluded since it is the same for every word $a_{i}$):
+
+$$\approx \log(P(a_{i} | class=1)) - \log(P(a_{i} | class=0))$$
+
+The reasoning behind the log odds ratio is that it will be greater than one for features (keywords) that cause belief in the Positive Class to be greater relative to the Negative Class. The features that have the greatest impact at classification time are those with both a high probability (because they appear often in the data) and a high odds ratio (because they strongly bias one label versus another). Computing the log odds requires a simple subtraction between the $wordDict$ entries, as the log function is already applied on them.
+
+
+\begin{verbatim}
+================== RUNNING PART 3 ===================
+10 most strongly Positive word predictions:
+['bold', 'spielbergs', 'ideals', 'lovingly', 'gattaca', 'wonderfully',
+'dread', 'fashioned', 'astounding', 'outstanding']
+10 most strongly Negative word predictions:
+['turkey', 'ludicrous', 'lifeless', 'feeble', 'unimaginative', 'stupidity',
+'sucks', 'nonsense', 'insipid', 'insulting']
+\end{verbatim}
+
+The relevant code snippet is shown below:
+
+\begin{lstlisting}
+def part3(wordDict):
+    logOdds = []
+    
+    for word in wordDict:
+        logOdds.append((wordDict[word][0] - wordDict[word][1], word))
+    logOdds.sort()
+    
+    vocab_size = len(logOdds)
+    print("10 most strongly Positive word predictions:")
+    print([word for val, word in logOdds[(vocab_size-10):]])
+    print("10 most strongly Negative word predictions:")
+    print([word for val, word in logOdds[:10]])
+\end{lstlisting}
+
+\end{homeworkProblem}
+
+
+
+
+
+
+
+
+
+
+\clearpage
+
+
+
+
+
+
+
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
