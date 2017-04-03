@@ -184,7 +184,210 @@
 % To have just one problem per page, simply put a \clearpage after each problem
 
 \begin{homeworkProblem}
-...
+
+\textbf{REINFORCE, A Monte-Carlo Policy-Gradient Method (episodic)}
+
+Input: a differentiable policy parameterization $\pi$(a$\mid$s, $\theta$), $\forall$ a $\in$ A, s $\in$ S, $\theta$ $\in$ $R^n$ \\
+Initialize policy weights $\theta$\\
+Repeat forever:
+
+\setlength\parindent{24pt} Generate an episode $S_0$, $A_0$, $R_1$, . . . ,   $S_{T - 1}$, $A_{T - 1}$, $R_T$ , following $\pi$($\cdot$$\mid$$\cdot$, $\theta$)
+
+\setlength\parindent{24pt} For each step of the episode t = 0, . . . , T $-$ 1:
+
+\setlength\parindent{48pt} $G_t$ $\leftarrow$ return from step t
+
+\setlength\parindent{48pt} $\theta$ $\leftarrow$ $\theta$ + $\alpha$$\gamma^t$$G_t$$\bigtriangledown$$\theta$ log $\pi$($A_t$$\mid$$S_t$,$\theta$)\\
+
+\noindent We would like to show the code in bipedal-reinforce.py corresponds with the pseudocode above.
+\begin{enumerate}
+\item \textbf{Input and initialization, policy learning}
+
+A policy function $\pi$ takes in a current state \textbf{s}, and outputs the action \textbf{a} the agent should take. For stochastic policy, $\pi$(a$\mid$s) = P($A_t$ = a $\mid$$S_t$ = s)\\
+In bipedal-reinforce.py, a single-hidden-layer neural network is used to implement the policy function.
+
+x -- Input for this neural network
+
+\setlength\parindent{20pt} a state vector of dimension 24 (24 features for one state \textbf{s})
+
+\noindent y -- Output for this neural network
+
+\setlength\parindent{20pt} probability for taking each possible action given current state \textbf{s}, number of actions = number of output units\\
+
+\begin{lstlisting}
+input_shape = env.observation_space.shape[0]
+NUM_INPUT_FEATURES = 24 #the state vector
+x = tf.placeholder(tf.float32, shape=(None, NUM_INPUT_FEATURES), name='x')
+y = tf.placeholder(tf.float32, shape=(None, output_units), name='y')
+
+\end{lstlisting} \vspace{5mm}
+
+\noindent 
+Referring to the first two lines of the pseudocode.
+
+Before implementing the network structure, the policy weights and bias terms are initialized randomly. 
+
+\begin{lstlisting}
+weights_init = xavier_initializer(uniform=False)
+relu_init = tf.constant_initializer(0.1)
+
+if args.load_model:
+    model = np.load(args.load_model)
+    hw_init = tf.constant_initializer(model['hidden/weights'])
+    hb_init = tf.constant_initializer(model['hidden/biases'])
+    mw_init = tf.constant_initializer(model['mus/weights'])
+    mb_init = tf.constant_initializer(model['mus/biases'])
+    sw_init = tf.constant_initializer(model['sigmas/weights'])
+    sb_init = tf.constant_initializer(model['sigmas/biases'])
+else:
+    hw_init = weights_init
+    hb_init = relu_init
+    mw_init = weights_init
+    mb_init = relu_init
+    sw_init = weights_init
+    sb_init = relu_init
+try:
+    output_units = env.action_space.shape[0]
+except AttributeError:
+    output_units = env.action_space.n
+\end{lstlisting} 
+\vspace{5mm}
+
+\noindent In terms of structure for the network,\\
+---  "hidden" is a fully connected layer, with observation features for states as inputs, hidden units as outputs, relu function as the activation function, weights initialized using xavier initializer/given constant, bias terms initialized using relu initializer/given constant.
+
+In this case, the actions are continuous, thus it is reasonable to use Gaussian distribution for the actions, centered around$\phi$$(s, a)^T$$\theta$, which is  a $\sim$ N($\phi$$(s, a)^T$$\theta$, $\sigma^2$)\\
+--- "mus" is a fully connected layer, with hidden units as inputs, $\phi$$(s, a)^T$$\theta$  as outputs, tanh function as the activation function, weights initialized using xavier initializer/given constant, bias terms initialized using relu initializer/given constant.\\
+--- "sigma" is a fully connected layer, also with hidden units as inputs, standard deviation $\sigma$ as outputs, softplus function as the activation function, weights initialized using xavier initializer/given constant, bias terms initialized using relu initializer/given constant.\\
+ 
+ 
+\begin{lstlisting}
+hidden = fully_connected(
+    inputs=x, #inputs x
+    num_outputs=hidden_size,
+    activation_fn=tf.nn.relu,
+    weights_initializer=hw_init,
+    weights_regularizer=None,
+    biases_initializer=hb_init,
+    scope='hidden')
+    
+#Gaussian distribution policy for the actions
+# mus = phi(s, a)^T times theta
+mus = fully_connected(
+    inputs=hidden, #hidden layer
+    num_outputs=output_units,
+    activation_fn=tf.tanh,
+    weights_initializer=mw_init,
+    weights_regularizer=None,
+    biases_initializer=mb_init,
+    scope='mus')
+    
+#the sigmas of the gaussian distribution,
+sigmas = tf.clip_by_value(fully_connected(
+    inputs=hidden, #units of hidden layer 
+    num_outputs=output_units,
+    activation_fn=tf.nn.softplus,
+    weights_initializer=sw_init,
+    weights_regularizer=None,
+    biases_initializer=sb_init,
+    scope='sigmas'),
+    TINY, 5)
+\end{lstlisting} \vspace{5mm}
+
+a $\sim$ N($\phi$$(s, a)^T$$\theta$, $\sigma^2$) \\
+For a certain state, probabilities $\pi$ are computed for continuous actions based on the state input x with 24 features. pi-sample is a randomly generated action based on probabilities in pi, this is called later in the loop. 
+
+\begin{lstlisting}
+all_vars = tf.global_variables()
+pi = tf.contrib.distributions.Normal(mus, sigmas, name='pi')
+pi_sample = tf.tanh(pi.sample(), name='pi_sample')
+
+\end{lstlisting}
+
+\item \textbf{Repeat Forever: loop for infinite number of episodes}\\
+Reset the environment for a new episode, following the policy with current $\theta$, generate all the states and actions $S_0$, $A_0$, $R_1$, . . . ,   $S_{T - 1}$, $A_{T - 1}$, $R_T$.\\  G is the total (discounted) reward, starting from time t=0\\ t is the timestep\\I is the coefficient for reward at timestep t (this is a discounted reward system)
+
+\begin{lstlisting}
+    # reset the environment
+    obs = env.reset() #root state
+    # following the policy with current theta
+    # generate all the states and actions and rewards
+    G = 0
+    ep_states = []
+    ep_actions = []
+    ep_rewards = [0]
+    done = False
+    t = 0
+    I = 1
+\end{lstlisting} \vspace{10mm}
+
+\noindent Now we would like to analyze how $G_t$ and $\theta$ are updated
+
+\noindent If this episode has not finished yet, add observation vectors(x inputs) to the state list. Based on state observations from input x, pick a single random action at time step t. Retrieve information on observations, reward, whether episode finished or not and info for taking this action. Add discounted reward for taking this action \textbf{a} to the reward list. \textbf{Update total discounted reward G by adding the discounted reward at the current time step to its original value, G = G + $reward_t$}. Update the reward discount coefficient by multiplying $\gamma$ to its original value. Update time step by adding 1. Repeat above steps until the average number of time steps per episode exceeds the constant value MAX STEP. \vspace{5mm}
+
+\begin{lstlisting}
+    while not done:
+        ep_states.append(obs)
+        env.render()
+        # pick a single random action for time step t, based on state obs -- input x
+        # pi_sample is a randomly generated action based on probablities in pi
+        action = sess.run([pi_sample], feed_dict={x:[obs]})[0][0]
+        ep_actions.append(action)
+        obs, reward, done, info = env.step(action)
+        ep_rewards.append(reward * I) #R_t - reward for taking action a
+        # G is the total discounted reward, starting from time t=0
+        #R0 + gamma*R1 + gamma^2*R2 + ... + gamma^(MAX_STEPS - 1)*R(N-1)
+        G += reward * I 
+        I *= gamma #rewards farther away in time count less (greedy approach)
+        #gamma between 0 and 1
+        t += 1
+        if t >= MAX_STEPS:
+            break
+
+\end{lstlisting} \vspace{10mm}
+
+For each step of the episode, if not done, $\theta$ is also updated. This corresponds to the last line in the pseudocode, $\theta$ $\leftarrow$ $\theta$ + $\alpha$$\gamma^t$$G_t$$\bigtriangledown$$\theta$ log $\pi$($A_t$$\mid$$S_t$,$\theta$)\\
+The codes in the next box show details of how the stochastic gradient is updated.\\
+
+\noindent  Take the log probability of the output $\pi$ for each state in this current episode, y is the output of neural network ie. the probability for taking each possible action given current state \textbf{s}. \\
+Initialize Returns in order to record all $G_t$ from t = 1 to T\\
+Multiply each reward value $G_{t}$ with the log of probability of the action $A_{t}$ taken at state $S_{t}$ for time step $t$, then take summation over all values for each time step $t$ within an episode.\\
+The goal is to maximize expected returns (Returns $\times$ log(pi)), this represents rewards from policy with current $\theta$. Comparing with the pseudocode, instead of doing an update for every time step within an episode, it computes the cumulative gradients for all time steps together (the gradient of a sum is equal to the sum of the gradients of the individual terms). Then, multiply the expected returns by -1, thus we need to find the minimum of this function(-1 $\times$ Returns $\times$ log(pi)). Apply gradient descent technique with Tensorflow to compute the gradient corresponding to the $\theta$ for updates.
+
+
+
+\begin{lstlisting}
+# log of prob of actions from A_0 to A_T-1
+log_pi = pi.log_prob(y, name='log_pi') #log prob(p16)
+
+#Returns contains all the G_t's from t=1 to t=T     
+Returns = tf.placeholder(tf.float32, name='Returns')
+optimizer = tf.train.GradientDescentOptimizer(alpha)
+train_op = optimizer.minimize(-1.0 * Returns * log_pi)
+
+sess = tf.Session()
+sess.run(tf.global_variables_initializer())
+
+\end{lstlisting}
+
+\noindent  If the model not loaded: for each index i of ep rewards, take a cumulative sum of entry at index i with all the entries before it. $G_t$ is the total discounted reward starting from time step t. $G_t$  = total rewards value - cumulative sum up towards time step t. Returns is a set of all $G_t$ from t = 1 to T
+Run tensonflow Session, use gradient descent to maximize expected rewards thus update $\theta$; record all the states from $s_0$ to $s_{T-1}$; recored all the actions from $A_0$ to $A_{T-1}$; record all the discounted returns $G_t$ from t = 1 to T.
+
+\begin{lstlisting}
+    if not args.load_model:
+        returns = np.array([G - np.cumsum(ep_rewards[:-1])]).T
+        index = ep % MEMORY
+         
+        _ = sess.run([train_op],
+                    feed_dict={x:np.array(ep_states),
+                                y:np.array(ep_actions),
+                                Returns:returns })
+
+\end{lstlisting}
+
+\end{enumerate}
+
+
 
 \end{homeworkProblem}
 
@@ -226,7 +429,7 @@ y = tf.placeholder(tf.int32, shape=(None), name='y')
 params = tf.get_variable("thetas",[NUM_INPUT_FEATURES,2])
 linear_layer = tf.matmul(x,params)
 pi = tf.nn.softmax(linear_layer)
-\end{lstlisting} \\\\
+\end{lstlisting}
 
 \item Stochastic gradient update
 
@@ -248,7 +451,8 @@ log_pi = tf.log(pi) #2 prob values for every state in vector of time steps
 #tf.reduce_sum - squeezes vector values across two rows into flat vector,
 #act_pi is probability of action A_t for every time step t
 
-act_pi = tf.reduce_sum(tf.multiply(log_pi, tf.one_hot(y, 2, axis=1)), reduction_indices=[1])
+act_pi = tf.reduce_sum(tf.multiply(log_pi, tf.one_hot(y, 2, axis=1)),
+reduction_indices=[1])
 
 #Returns contains all the G_t's from t=1 to t=T     
 Returns = tf.placeholder(tf.float32, name='Returns')
@@ -301,51 +505,47 @@ ep_actions.append(action)
 
 \begin{homeworkProblem}
 
-List the 10 words that most strongly predict that the review is positive, and the 10 words that most strongly predict that the review is negative. State how you obtained those in terms of the the conditional probabilities used in the Naive Bayes algorithm.
+\textbf{(a)}\\
+printout:
+\\
 
-For each word $a_{i}$ in the training set of reviews we store the $\log$ of the conditional probability of a word with respect to the class $$\log(P(a_{i} | class)) + \log(P(class))$$ in a dictionary named $wordDict$ stored under the respective class (i.e. either $wordDict[word][0]$ for positive or $wordDict[word][1]$ for negative). This allows us to easily compute the bayes classification probability for a sample review consisting of multiple words by taking the sum of the log of conditional probabilities, or the sum of the corresponding entries for each word $a_{i}$ in the $wordDict$.
+\textbf{(b)}\\
+According to the setup codes below, \\
 
-To obtain the words that strongly predict one of the classes, we used the log odds ratio of the conditional probabilities of $a_{i}$ between the positive and negative classes. For example, the ratio of the positive to the negative class may be expressed as:
+The input vector has a dimension of 4. (x, x', $\theta$, $\theta$')\\
+\textbf{x} -- position of cart along the horizontal axis, (with x=0 being the middle point. x takes positive and negative values for the cart on different sides of the middle point)\\
+\textbf{x'} -- velocity of cart along the horizontal axis\\
+\textbf{$\theta$} -- angle between the pole and its balanced position (the pole is considered balanced if it is perpendicular to the the horizontal axis)\\
+\textbf{$\theta$'} -- angular velocity of the pole\\
 
-$$\log(\frac{P(class=1 | a_{i})}{P(class=0 | a_{i})})$$
+Observing our output, we found that 
 
-$$ = \log\Big(\frac{\big(\frac{P(a_{i}=1 | class=1) P(class=1)}{P(a_{i})}\big)}{\big(\frac{P(a_{i}=1 | class=0)P(class=0)}{P(a_{i})}\big)}\Big)$$
-
-
-$$= \log(P(a_{i} | class=1)) - \log(P(a_{i} | class=0)) + log(\frac{P(class=1)}{P(class=0)})$$
-
-(The $log(\frac{P(class=1)}{P(class=0)})$ term may be excluded since it is the same for every word $a_{i}$):
-
-$$\approx \log(P(a_{i} | class=1)) - \log(P(a_{i} | class=0))$$
-
-The reasoning behind the log odds ratio is that it will be greater than one for features (keywords) that cause belief in the Positive Class to be greater relative to the Negative Class. The features that have the greatest impact at classification time are those with both a high probability (because they appear often in the data) and a high odds ratio (because they strongly bias one label versus another). Computing the log odds requires a simple subtraction between the $wordDict$ entries, as the log function is already applied on them.
-
-
-\begin{verbatim}
-================== RUNNING PART 3 ===================
-10 most strongly Positive word predictions:
-['bold', 'spielbergs', 'ideals', 'lovingly', 'gattaca', 'wonderfully',
-'dread', 'fashioned', 'astounding', 'outstanding']
-10 most strongly Negative word predictions:
-['turkey', 'ludicrous', 'lifeless', 'feeble', 'unimaginative', 'stupidity',
-'sucks', 'nonsense', 'insipid', 'insulting']
-\end{verbatim}
-
-The relevant code snippet is shown below:
 
 \begin{lstlisting}
-def part3(wordDict):
-    logOdds = []
-    
-    for word in wordDict:
-        logOdds.append((wordDict[word][0] - wordDict[word][1], word))
-    logOdds.sort()
-    
-    vocab_size = len(logOdds)
-    print("10 most strongly Positive word predictions:")
-    print([word for val, word in logOdds[(vocab_size-10):]])
-    print("10 most strongly Negative word predictions:")
-    print([word for val, word in logOdds[:10]])
+def _step(self, action):
+        assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
+        state = self.state
+        x, x_dot, theta, theta_dot = state
+        force = self.force_mag if action==1 else -self.force_mag
+        costheta = math.cos(theta)
+        sintheta = math.sin(theta)
+        temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / 
+               self.total_mass
+        thetaacc = (self.gravity * sintheta - costheta* temp) /(self.length * 
+                   (4.0/3.0 - self.masspole * costheta * costheta / self.total_mass))
+        xacc  = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+        x  = x + self.tau * x_dot
+        x_dot = x_dot + self.tau * xacc
+        theta = theta + self.tau * theta_dot
+        theta_dot = theta_dot + self.tau * thetaacc
+        self.state = (x,x_dot,theta,theta_dot)
+        done =  x < -self.x_threshold \
+                or x > self.x_threshold \
+                or theta < -self.theta_threshold_radians \
+                or theta > self.theta_threshold_radians
+        done = bool(done)
+
+        return np.array(self.state), reward, done, {}
 \end{lstlisting}
 
 \end{homeworkProblem}
