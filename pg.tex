@@ -405,7 +405,6 @@ We added our code right after the class $CartPoleEnv$, and set up the environmen
 
 \begin{lstlisting}
 env = gym.make('CartPole-v0')
-cartpole = CartPoleEnv()
 \end{lstlisting}
 
 We added the line 
@@ -421,14 +420,21 @@ We removed the previous policy function model which was a single-hidden-layer ne
 We have variables $x$, $params$ with dimensions ($T \times 4$) and ($4 \times 2$) respectively. Variable $x$ represents the list of States $S$ of the cartpole, for a single episode. Each individual state is encoded by $4$ features (thus, NUM\_INPUT\_FEATURES is updated to $4$), relevant to the internal state representation as dictated by the $CartPoleEnv$ class. Variable $params$ represents our theta parameters for the policy function, they are the weights of the fully connected single layer. In the Cart Pole task, only two actions are possible, applying a force pushing left, and applying a force pushing right. Thus our policy function, which takes a state as input and outputs the probability of an action, has two outputs: one for action left and one for action right. Our corresponding single layer network has two output units, which are passed through a softmax activation function, which will eventually learn to compute the "probabilities" of an action, through our policy reinforcement training algorithm. This justifies the ($4 \times 2$) dimension of our theta parameter matrix $params$. \\
 
 \begin{lstlisting}
-NUM_INPUT_FEATURES = 4 #the number of features of the state vector 
-x = tf.placeholder(tf.float32, shape=(None,NUM_INPUT_FEATURES), name='x') #state
-#y - A_t (actions selected from A_0 to A_T-1 via bernoulli)
+#the number of features of the state vector
+NUM_INPUT_FEATURES = env.observation_space.shape[0] 
+
+params = tf.get_variable("thetas", shape=[NUM_INPUT_FEATURES, output_units])
+bias = tf.get_variable("bias", shape=[output_units])
+
+#the state vector input
+x = tf.placeholder(tf.float32, shape=(None, NUM_INPUT_FEATURES), name='x')
+#y - At (actions selected from A_0 to A_T-1 via bernoulli)
 y = tf.placeholder(tf.int32, shape=(None), name='y')
 
-params = tf.get_variable("thetas",[NUM_INPUT_FEATURES,2])
-linear_layer = tf.matmul(x,params)
+linear_layer = tf.matmul(x, params)+bias
 pi = tf.nn.softmax(linear_layer)
+
+
 \end{lstlisting}
 
 \item Stochastic gradient update
@@ -454,14 +460,14 @@ log_pi = tf.log(pi) #2 prob values for every state in vector of time steps
 act_pi = tf.reduce_sum(tf.multiply(log_pi, tf.one_hot(y, 2, axis=1)),
 reduction_indices=[1])
 
-#Returns contains all the G_t's from t=1 to t=T     
+#Returns contains all the G_t's from t=1 to t=T  
 Returns = tf.placeholder(tf.float32, name='Returns')
 optimizer = tf.train.GradientDescentOptimizer(alpha)
+train_op = optimizer.minimize(-1.0 * Returns * act_pi)
 
 vect = act_pi * Returns #elementwise multiplication
 #for gradient update for entire episode we take the sum
-#Multiply by -1 because we want to maximize JavV reinforcement reward by 
-#following policy theta
+#Multiply by -1 because we want to maximize JavV reinforcement reward by following policy theta
 loss = -tf.reduce_sum(vect) 
 train_op = optimizer.minimize(loss)
 
@@ -472,7 +478,7 @@ train_op = optimizer.minimize(loss)
 We changed the values of $\alpha$ and $\gamma$ to be 0.0001 and 0.99 respectively, and compute the average number of time-steps per episode, stopping the reinforcement algorithm when the average is at $50$ or higher. MAX\_STEPS (max limit of time steps possible in an episode) is given by the environment constant which is set at $200$ by default. 
 
 \begin{lstlisting}
-alpha = 0.0001
+alpha = 1e-6
 gamma = 0.99
 MAX_STEPS = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
 \end{lstlisting}
@@ -505,8 +511,213 @@ ep_actions.append(action)
 
 \begin{homeworkProblem}
 
-\textbf{(a)}\\
-printout:
+\textbf{(a)} Printout:
+\begin{verbatim}
+At Episode 0 average number of time steps per episode = 14.0
+Weights of the policy function: 
+ [[ 0.55755877  0.60240793]
+ [ 0.44874287 -0.53820491]
+ [ 0.45429996 -0.63923603]
+ [ 0.01130467  0.78500932]]
+At Episode 2 average number of time steps per episode = 56.6666666667
+Weights of the policy function: 
+ [[ 0.53600371  0.623963  ]
+ [ 0.43200225 -0.52146423]
+ [ 0.45346969 -0.6384058 ]
+ [ 0.00672296  0.78959101]]
+At Episode 3 average number of time steps per episode = 51.0
+Weights of the policy function: 
+ [[ 0.53594983  0.62401688]
+ [ 0.43245232 -0.5219143 ]
+ [ 0.45365512 -0.63859123]
+ [ 0.00674696  0.78956699]]
+At Episode 100 average number of time steps per episode = 31.2376237624
+Weights of the policy function: 
+ [[ 0.53436333  0.62560338]
+ [ 0.43284601 -0.52230793]
+ [ 0.44868213 -0.63361824]
+ [-0.01298162  0.80929571]]
+At Episode 200 average number of time steps per episode = 34.0597014925
+Weights of the policy function: 
+ [[ 0.53912431  0.6208424 ]
+ [ 0.46296576 -0.55242783]
+ [ 0.44166663 -0.62660259]
+ [-0.06721984  0.86353391]]
+At Episode 300 average number of time steps per episode = 33.8239202658
+Weights of the policy function: 
+ [[ 0.53848225  0.62148446]
+ [ 0.45933744 -0.54879963]
+ [ 0.43758854 -0.62252426]
+ [-0.08025246  0.87656689]]
+At Episode 400 average number of time steps per episode = 34.6259351621
+Weights of the policy function: 
+ [[ 0.5386703   0.62129641]
+ [ 0.45510232 -0.5445646 ]
+ [ 0.43074602 -0.61568159]
+ [-0.09911039  0.89542466]]
+At Episode 500 average number of time steps per episode = 35.7884231537
+Weights of the policy function: 
+ [[ 0.53805286  0.62191385]
+ [ 0.46096849 -0.5504303 ]
+ [ 0.41963291 -0.6045683 ]
+ [-0.14524838  0.94156253]]
+At Episode 600 average number of time steps per episode = 36.3410981697
+Weights of the policy function: 
+ [[ 0.54066473  0.61930197]
+ [ 0.43943968 -0.52890176]
+ [ 0.41010731 -0.59504306]
+ [-0.14948153  0.94579589]]
+At Episode 700 average number of time steps per episode = 36.8045649073
+Weights of the policy function: 
+ [[ 0.53655952  0.62340719]
+ [ 0.42556515 -0.5150274 ]
+ [ 0.39745358 -0.58238965]
+ [-0.1867042   0.98301834]]
+At Episode 800 average number of time steps per episode = 37.7265917603
+Weights of the policy function: 
+ [[ 0.53741318  0.62255353]
+ [ 0.43591556 -0.52537787]
+ [ 0.38919657 -0.5741322 ]
+ [-0.22438921  1.02070367]]
+At Episode 900 average number of time steps per episode = 37.8213096559
+Weights of the policy function: 
+ [[ 0.53998774  0.61997896]
+ [ 0.44810259 -0.53756505]
+ [ 0.38740206 -0.57233781]
+ [-0.23696616  1.03328073]]
+At Episode 1000 average number of time steps per episode = 38.3526473526
+Weights of the policy function: 
+ [[ 0.54247153  0.61749518]
+ [ 0.44651994 -0.53598231]
+ [ 0.37451959 -0.55945563]
+ [-0.2823396   1.07865429]]
+At Episode 1100 average number of time steps per episode = 38.9554950045
+Weights of the policy function: 
+ [[ 0.54386896  0.61609775]
+ [ 0.44097793 -0.53044027]
+ [ 0.36343193 -0.5483678 ]
+ [-0.31686878  1.11318338]]
+At Episode 1200 average number of time steps per episode = 39.3896752706
+Weights of the policy function: 
+ [[ 0.5424608   0.61750591]
+ [ 0.45023283 -0.53969496]
+ [ 0.35200471 -0.53694052]
+ [-0.37174591  1.16806066]]
+At Episode 1300 average number of time steps per episode = 39.8239815527
+Weights of the policy function: 
+ [[ 0.54581171  0.61415499]
+ [ 0.461882   -0.55134451]
+ [ 0.34298766 -0.52792341]
+ [-0.42273465  1.21904969]]
+At Episode 1400 average number of time steps per episode = 40.4354032834
+Weights of the policy function: 
+ [[ 0.54816878  0.61179787]
+ [ 0.46878794 -0.55825049]
+ [ 0.33294338 -0.51787919]
+ [-0.46084109  1.25715744]]
+At Episode 1500 average number of time steps per episode = 40.7868087941
+Weights of the policy function: 
+ [[ 0.55583572  0.60413092]
+ [ 0.48687363 -0.57633632]
+ [ 0.3293772  -0.5143128 ]
+ [-0.48769423  1.28401065]]
+At Episode 1600 average number of time steps per episode = 41.514678326
+Weights of the policy function: 
+ [[ 0.55211782  0.60784882]
+ [ 0.4712818  -0.56074476]
+ [ 0.31567404 -0.50060946]
+ [-0.52434981  1.32066584]]
+At Episode 1700 average number of time steps per episode = 41.8906525573
+Weights of the policy function: 
+ [[ 0.54059702  0.61936963]
+ [ 0.45211741 -0.5415802 ]
+ [ 0.30363086 -0.48856625]
+ [-0.5473851   1.34370077]]
+At Episode 1800 average number of time steps per episode = 42.3981121599
+Weights of the policy function: 
+ [[ 0.52419233  0.63577431]
+ [ 0.43957868 -0.52904117]
+ [ 0.29083389 -0.47576928]
+ [-0.59951568  1.3958317 ]]
+At Episode 1900 average number of time steps per episode = 42.87743293
+Weights of the policy function: 
+ [[ 0.51657081  0.64339584]
+ [ 0.43919921 -0.52866197]
+ [ 0.28493458 -0.46986997]
+ [-0.62112528  1.41744184]]
+At Episode 2000 average number of time steps per episode = 43.6636681659
+Weights of the policy function: 
+ [[ 0.5068773   0.65308934]
+ [ 0.40527204 -0.49473462]
+ [ 0.25522092 -0.44015631]
+ [-0.70473766  1.50105453]]
+At Episode 2100 average number of time steps per episode = 44.2793907663
+Weights of the policy function: 
+ [[ 0.51534802  0.64461863]
+ [ 0.34820578 -0.43766838]
+ [ 0.23294462 -0.41788   ]
+ [-0.71354812  1.5098654 ]]
+At Episode 2200 average number of time steps per episode = 45.0549750114
+Weights of the policy function: 
+ [[ 0.53165525  0.62831134]
+ [ 0.31564504 -0.40510768]
+ [ 0.21052435 -0.39545962]
+ [-0.7434383   1.53975523]]
+At Episode 2300 average number of time steps per episode = 45.5006518905
+Weights of the policy function: 
+ [[ 0.53189516  0.62807143]
+ [ 0.30605838 -0.39552101]
+ [ 0.20217578 -0.38711098]
+ [-0.75433451  1.55065107]]
+At Episode 2400 average number of time steps per episode = 45.9920866306
+Weights of the policy function: 
+ [[ 0.52435535  0.6356113 ]
+ [ 0.2743797  -0.36384234]
+ [ 0.18376607 -0.36870134]
+ [-0.79971081  1.5960263 ]]
+At Episode 2500 average number of time steps per episode = 46.419032387
+Weights of the policy function: 
+ [[ 0.55165166  0.60831499]
+ [ 0.28457341 -0.37403607]
+ [ 0.17400324 -0.35893857]
+ [-0.82451653  1.62083161]]
+At Episode 2600 average number of time steps per episode = 46.8904267589
+Weights of the policy function: 
+ [[ 0.55484182  0.60512483]
+ [ 0.29693455 -0.38639712]
+ [ 0.16573018 -0.35066542]
+ [-0.88662434  1.68293941]]
+At Episode 2700 average number of time steps per episode = 47.698630137
+Weights of the policy function: 
+ [[ 0.50808698  0.65187955]
+ [ 0.20047094 -0.2899335 ]
+ [ 0.13719249 -0.3221277 ]
+ [-0.92898381  1.72529876]]
+At Episode 2800 average number of time steps per episode = 48.3691538736
+Weights of the policy function: 
+ [[ 0.49883416  0.6611324 ]
+ [ 0.18390864 -0.27337098]
+ [ 0.11568674 -0.30062205]
+ [-1.01573157  1.81204665]]
+At Episode 2900 average number of time steps per episode = 48.9448466046
+Weights of the policy function: 
+ [[ 0.42597786  0.73398882]
+ [ 0.11683179 -0.20629403]
+ [ 0.09575897 -0.28069434]
+ [-1.04848719  1.84480226]]
+At Episode 3000 average number of time steps per episode = 49.7877374209
+Weights of the policy function: 
+ [[ 0.43547112  0.72449559]
+ [ 0.12312732 -0.21258955]
+ [ 0.0748591  -0.25979441]
+ [-1.09224343  1.88855851]]
+At Episode 3033 average number of time steps per episode = 50.0049439684
+Weights of the policy function: 
+ [[ 0.36846304  0.79150385]
+ [ 0.04124827 -0.13071053]
+ [ 0.06586583 -0.25080118]
+ [-1.09515846  1.89147353]]
+\end{verbatim}
 \\
 
 \textbf{(b)}\\
