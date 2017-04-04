@@ -256,7 +256,7 @@ except AttributeError:
 \noindent In terms of structure for the network,\\
 ---  "hidden" is a fully connected layer, with observation features for states as inputs, hidden units as outputs, relu function as the activation function, weights initialized using xavier initializer/given constant, bias terms initialized using relu initializer/given constant.
 
-In this case, the actions are continuous, thus it is reasonable to use Gaussian distribution for the actions, centered around$\phi$$(s, a)^T$$\theta$, which is  a $\sim$ N($\phi$$(s, a)^T$$\theta$, $\sigma^2$)\\
+\textbf{In this case, the actions are continuous, thus it is reasonable to use Gaussian distribution for the actions, centered around$\phi$$(s, a)^T$$\theta$, which is  a $\sim$ N($\phi$$(s, a)^T$$\theta$, $\sigma^2$)} \\
 --- "mus" is a fully connected layer, with hidden units as inputs, $\phi$$(s, a)^T$$\theta$  as outputs, tanh function as the activation function, weights initialized using xavier initializer/given constant, bias terms initialized using relu initializer/given constant.\\
 --- "sigma" is a fully connected layer, also with hidden units as inputs, standard deviation $\sigma$ as outputs, softplus function as the activation function, weights initialized using xavier initializer/given constant, bias terms initialized using relu initializer/given constant.\\
  
@@ -294,7 +294,7 @@ sigmas = tf.clip_by_value(fully_connected(
     TINY, 5)
 \end{lstlisting} \vspace{5mm}
 
-a $\sim$ N($\phi$$(s, a)^T$$\theta$, $\sigma^2$) \\
+\textbf{a $\sim$ N($\phi$$(s, a)^T$$\theta$, $\sigma^2$)}  \\
 For a certain state, probabilities $\pi$ are computed for continuous actions based on the state input x with 24 features. pi-sample is a randomly generated action based on probabilities in pi, this is called later in the loop. 
 
 \begin{lstlisting}
@@ -321,7 +321,7 @@ Reset the environment for a new episode, following the policy with current $\the
     I = 1
 \end{lstlisting} \vspace{10mm}
 
-\noindent Now we would like to analyze how $G_t$ and $\theta$ are updated
+\noindent \textbf{Now we would like to analyze how $G_t$ and $\theta$ are updated.} 
 
 \noindent If this episode has not finished yet, add observation vectors(x inputs) to the state list. Based on state observations from input x, pick a single random action at time step t. Retrieve information on observations, reward, whether episode finished or not and info for taking this action. Add discounted reward for taking this action \textbf{a} to the reward list. \textbf{Update total discounted reward G by adding the discounted reward at the current time step to its original value, G = G + $reward_t$}. Update the reward discount coefficient by multiplying $\gamma$ to its original value. Update time step by adding 1. Repeat above steps until the average number of time steps per episode exceeds the constant value MAX STEP. \vspace{5mm}
 
@@ -718,19 +718,25 @@ Weights of the policy function:
  [ 0.06586583 -0.25080118]
  [-1.09515846  1.89147353]]
 \end{verbatim}
-\\
+
 
 \textbf{(b)}\\
 According to the setup codes below, \\
 
-The input vector has a dimension of 4. (x, x', $\theta$, $\theta$')\\
+\textbf{The input vector has a dimension of 4. (x, x', $\theta$, $\theta$')} \\
 \textbf{x} -- position of cart along the horizontal axis, (with x=0 being the middle point. x takes positive and negative values for the cart on different sides of the middle point)\\
 \textbf{x'} -- velocity of cart along the horizontal axis\\
 \textbf{$\theta$} -- angle between the pole and its balanced position (the pole is considered balanced if it is perpendicular to the the horizontal axis)\\
 \textbf{$\theta$'} -- angular velocity of the pole\\
 
-Observing our output, we found that 
+The episode will not finish if the cart's position within (-2.4, 2.4) and the pole's position within (-24$\pi$/360, 24$\pi$/360). After the training process, the cart and the pole have a tendency to be balanced, that means x = 0, and $\theta$  = 0 \\
+Observing our output, the weights in 2 different columns suggest moving in 2 opposite directions.\\ 
 
+Considering the position of the cart,  the vector in the first row of the weights matrix [ 0.36846304  0.79150385] suggests that in the following action the cart be positioned on the side with a higher weighting for this vector (corresponding to the right column). We claim our output to be reasonable. If you look at the vector [ 0.04124827 -0.13071053] with respect to the velocity of cart, which is in the second row of the weight matrix. The higher weight appears to be in the left column, this indicates the cart to be moving towards the direction corresponding to the left column. \textbf{The first two vectors together suggest the cart has a tendency towards the middle point.}  \\
+
+Considering the position of the pole, the vector in the third row of the weights matrix [ 0.06586583 -0.25080118] suggests that in the following action the pole be positioned on the side with a higher weighting for this vector (corresponding to the left column). Again, we claim our output to be reasonable. If you look at the vector [-1.09515846  1.89147353] with respect to the angular velocity of pole, which is in the last row of the weight matrix. The higher weight appears to be in the right column, this indicates the pole to be moving towards the direction corresponding to the right column. \textbf{The last two vectors together suggest the pole has a tendency to stay perpendicular to the horizontal axis.} \\
+
+Overall, the cart and pole system has a tendency to be balanced, which is as expected after the training process. \vspace{5mm}
 
 \begin{lstlisting}
 def _step(self, action):
